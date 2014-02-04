@@ -3,7 +3,7 @@ package workout
 import (
 	"errors"
 	"fmt"
-	"github.com/codeforsystemsbiology/verboselogger"
+	"github.com/bububa/verboselogger"
 	"strconv"
 )
 
