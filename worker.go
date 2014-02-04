@@ -17,20 +17,20 @@ var (
 )
 
 func NewWorker(m *Master, wid int) (w *Worker) {
-	var err error
+	//var err error
 
 	w = new(Worker)
 	w.master = m
 	w.id = wid
-	w.client, err = NewClient(m.url, m.tubes)
+	w.client = m.client
 
 	if m.ReserveTimeout > time.Duration(0) {
 		w.client.ReserveTimeout = m.ReserveTimeout
 	}
 
-	if err != nil {
+	/*if err != nil {
 		log.Warn("worker %d: client error: %s", wid, err)
-	}
+	}*/
 
 	return
 }
@@ -43,13 +43,13 @@ func (w *Worker) run() {
 	var ok bool
 	var err error
 
-	log.Debug("worker %d: starting", w.id)
-	defer log.Debug("worker %d: stopped", w.id)
+	logger.Debug("worker %d: starting", w.id)
+	defer logger.Debug("worker %d: stopped", w.id)
 
 	for {
 		select {
 		case <-w.master.quit:
-			log.Debug("worker %d: quitting...", w.id)
+			logger.Debug("worker %d: quitting...", w.id)
 			return
 		default:
 		}
@@ -58,13 +58,13 @@ func (w *Worker) run() {
 			continue
 		}
 
-		log.Trace("worker %d: got job %d", w.id, job.Id)
+		logger.Debug("worker %d: got job %d", w.id, job.Id)
 
 		atomic.AddInt32(&w.master.stat_active, 1)
 		atomic.AddUint64(&w.master.stat_attempt, 1)
 		err = w.process(job)
 
-		if err != nil {
+		if err != nil && w.master.stat_failure < w.master.max_retry {
 			atomic.AddUint64(&w.master.stat_failure, 1)
 			w.client.Release(job, err)
 		} else {

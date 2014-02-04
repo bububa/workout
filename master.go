@@ -21,6 +21,7 @@ type Master struct {
 	concurrency    int
 	url            string
 	tubes          []string
+	client         *Client
 	workers        []*Worker
 	callbacks      map[string]JobCallback
 	handlers       map[string]JobHandler
@@ -31,6 +32,7 @@ type Master struct {
 	stat_attempt   uint64
 	stat_success   uint64
 	stat_failure   uint64
+	max_retry      uint64
 	mg             sync.WaitGroup
 	wg             sync.WaitGroup
 }
@@ -44,14 +46,20 @@ func (m *Master) Stats() (s *Stats) {
 	return
 }
 
-func NewMaster(url string, tubes []string, concurrency int) *Master {
+func NewMaster(url string, tubes []string, concurrency int, max_retry uint64) *Master {
+	client, err := NewClient(url, tubes)
+	if err != nil {
+		logger.Warn(err)
+	}
 	return &Master{
 		url:         url,
 		tubes:       tubes,
+		client:      client,
 		concurrency: concurrency,
 		callbacks:   make(map[string]JobCallback),
 		handlers:    make(map[string]JobHandler),
 		timeouts:    make(map[string]time.Duration),
+		max_retry:   max_retry,
 	}
 }
 
@@ -70,30 +78,30 @@ func (m *Master) Start() (err error) {
 
 	m.workers = make([]*Worker, m.concurrency)
 
-	log.Info("master: starting %d workers...", m.concurrency)
+	logger.Debug("master: starting %d workers...", m.concurrency)
 
 	for i := 0; i < m.concurrency; i++ {
 		m.workers[i] = NewWorker(m, i)
 		go m.workers[i].run()
 	}
 
-	log.Info("master: ready")
+	logger.Debug("master: ready")
 
 	return
 }
 
 func (m *Master) Stop() (err error) {
-	log.Info("master: stopping %d workers...", m.concurrency)
+	logger.Debug("master: stopping %d workers...", m.concurrency)
 
 	for i := 0; i < m.concurrency; i++ {
 		m.quit <- true
 	}
 
 	m.wg.Wait()
-	log.Info("master: %d workers stopped", m.concurrency)
+	logger.Debug("master: %d workers stopped", m.concurrency)
 
 	m.mg.Done()
-	log.Info("master: stopped")
+	logger.Debug("master: stopped")
 
 	return
 }

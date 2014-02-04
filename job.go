@@ -11,6 +11,7 @@ type Job struct {
 	Id        uint64        `json:"id"`
 	Priority  uint32        `json:"priority"`
 	Tube      string        `json:"tube"`
+	Delay 	  time.Duration `json:"delay"`
 	TimeToRun time.Duration `json:"ttr"`
 	Body      string        `json:"body"`
 	Age       time.Duration `json:"age"`

@@ -2,7 +2,7 @@ package workout
 
 import (
 	"fmt"
-	"github.com/kr/beanstalk"
+	"github.com/bububa/beanstalk"
 	"os"
 	"strings"
 	"sync"
@@ -19,6 +19,7 @@ type Client struct {
 	stat_put       uint64
 	stat_reserve   uint64
 	stat_release   uint64
+	ExitChan       chan struct{}
 }
 
 func NewClient(addr string, tubes []string) (client *Client, err error) {
@@ -33,9 +34,14 @@ func NewClient(addr string, tubes []string) (client *Client, err error) {
 		conn:           conn,
 		mu:             new(sync.Mutex),
 		ReserveTimeout: time.Duration(5 * time.Second),
+		ExitChan:       make(chan struct{}, 1),
 	}
 
 	return
+}
+
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
 
 func (c *Client) Put(job *Job) (id uint64, err error) {
@@ -47,7 +53,7 @@ func (c *Client) Put(job *Job) (id uint64, err error) {
 		Name: job.Tube,
 	}
 
-	id, err = tube.Put([]byte(job.Body), job.Priority, 0, time.Duration(job.TimeToRun))
+	id, err = tube.Put([]byte(job.Body), job.Priority, time.Duration(job.Delay), time.Duration(job.TimeToRun))
 	if err != nil {
 		atomic.AddUint64(&c.stat_put, 1)
 	}
@@ -67,7 +73,7 @@ func (c *Client) Reserve() (job *Job, found bool, err error) {
 	if err != nil {
 		for _, estr := range criticalErrors {
 			if strings.Contains(fmt.Sprintf("%s", err), estr) {
-				log.Error("exiting due to critical error: %s", err)
+				logger.Warn(err)
 				os.Exit(1)
 			}
 		}
@@ -79,7 +85,7 @@ func (c *Client) Reserve() (job *Job, found bool, err error) {
 
 	stats, err = c.conn.StatsJob(id)
 	if err != nil {
-		log.Error("unable to get stats for job %d: %+v", err)
+		logger.Warn(err)
 		return
 	}
 
@@ -88,6 +94,7 @@ func (c *Client) Reserve() (job *Job, found bool, err error) {
 	job.Body = string(body)
 	job.Priority = uint32(parseInt(stats["pri"]))
 	job.Tube = stats["tube"]
+	job.Delay = time.Duration(parseInt(stats["delay"])) * time.Second
 	job.TimeToRun = time.Duration(parseInt(stats["ttr"])) * time.Second
 	job.Age = time.Duration(parseInt(stats["age"])) * time.Second
 	job.Attempt = uint32(parseInt(stats["reserves"]))
@@ -123,4 +130,51 @@ func (c *Client) Release(job *Job, err error) {
 	atomic.AddUint64(&c.stat_release, 1)
 
 	return
+}
+
+func (c *Client) StatsJob(jobId uint64) (map[string]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	stats, err := c.conn.StatsJob(jobId)
+	return stats, err
+}
+
+func (c *Client) Exit() {
+	c.Close()
+	c.ExitChan <- struct{}{}
+}
+
+func (c *Client) Drop() {
+	ticker := time.NewTicker(time.Duration(5) * time.Second)
+
+	var job *Job
+	var ok bool
+
+	for {
+		select {
+		case <-c.ExitChan:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			go c.Stats()
+		default:
+		}
+		if job, ok, _ = c.Reserve(); !ok {
+			continue
+		}
+		c.Delete(job)
+	}
+}
+
+func (c *Client) Stats() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	stats, _ := c.conn.Stats()
+	currentJobs := uint32(parseInt(stats["current-jobs-ready"]))
+	logger.Debug("current ready jobs:%d", currentJobs)
+	if currentJobs == 0 {
+		c.Exit()
+	}
 }

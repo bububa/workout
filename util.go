@@ -3,11 +3,15 @@ package workout
 import (
 	"errors"
 	"fmt"
-	"github.com/jcoene/gologger"
+	"github.com/codeforsystemsbiology/verboselogger"
 	"strconv"
 )
 
-var log logger.Logger = *logger.NewLogger(logger.LOG_LEVEL_DEBUG, "workout")
+var logger *log4go.VerboseLogger
+
+func SetLogger(alogger *log4go.VerboseLogger) {
+	logger = alogger
+}
 
 func Error(f string, v ...interface{}) error {
 	return errors.New(fmt.Sprintf(f, v...))
