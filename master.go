@@ -49,7 +49,7 @@ func (m *Master) Stats() (s *Stats) {
 func NewMaster(url string, tubes []string, concurrency int, max_retry uint64) *Master {
 	client, err := NewClient(url, tubes)
 	if err != nil {
-		logger.Warn(err)
+		logger.Error(err)
 	}
 	return &Master{
 		url:         url,
@@ -78,30 +78,30 @@ func (m *Master) Start() (err error) {
 
 	m.workers = make([]*Worker, m.concurrency)
 
-	logger.Debug("master: starting %d workers...", m.concurrency)
+	logger.Infof("master: starting %d workers...", m.concurrency)
 
 	for i := 0; i < m.concurrency; i++ {
 		m.workers[i] = NewWorker(m, i)
 		go m.workers[i].run()
 	}
 
-	logger.Debug("master: ready")
+	logger.Info("master: ready")
 
 	return
 }
 
 func (m *Master) Stop() (err error) {
-	logger.Debug("master: stopping %d workers...", m.concurrency)
+	logger.Infof("master: stopping %d workers...", m.concurrency)
 
 	for i := 0; i < m.concurrency; i++ {
 		m.quit <- true
 	}
 
 	m.wg.Wait()
-	logger.Debug("master: %d workers stopped", m.concurrency)
+	logger.Infof("master: %d workers stopped", m.concurrency)
 
 	m.mg.Done()
-	logger.Debug("master: stopped")
+	logger.Info("master: stopped")
 
 	return
 }

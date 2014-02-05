@@ -73,7 +73,7 @@ func (c *Client) Reserve() (job *Job, found bool, err error) {
 	if err != nil {
 		for _, estr := range criticalErrors {
 			if strings.Contains(fmt.Sprintf("%s", err), estr) {
-				logger.Warn(err)
+				logger.Critical(err)
 				os.Exit(1)
 			}
 		}
@@ -85,7 +85,7 @@ func (c *Client) Reserve() (job *Job, found bool, err error) {
 
 	stats, err = c.conn.StatsJob(id)
 	if err != nil {
-		logger.Warn(err)
+		logger.Critical(err)
 		return
 	}
 
@@ -173,7 +173,7 @@ func (c *Client) Stats() {
 
 	stats, _ := c.conn.Stats()
 	currentJobs := uint32(parseInt(stats["current-jobs-ready"]))
-	logger.Debug("current ready jobs:%d", currentJobs)
+	logger.Infof("current ready jobs:%d", currentJobs)
 	if currentJobs == 0 {
 		c.Exit()
 	}

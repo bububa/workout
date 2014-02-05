@@ -43,13 +43,13 @@ func (w *Worker) run() {
 	var ok bool
 	var err error
 
-	logger.Debug("worker %d: starting", w.id)
-	defer logger.Debug("worker %d: stopped", w.id)
+	logger.Infof("worker %d: starting", w.id)
+	defer logger.Infof("worker %d: stopped", w.id)
 
 	for {
 		select {
 		case <-w.master.quit:
-			logger.Debug("worker %d: quitting...", w.id)
+			logger.Infof("worker %d: quitting...", w.id)
 			return
 		default:
 		}
@@ -58,7 +58,7 @@ func (w *Worker) run() {
 			continue
 		}
 
-		logger.Debug("worker %d: got job %d", w.id, job.Id)
+		logger.Debugf("worker %d: got job %d", w.id, job.Id)
 
 		atomic.AddInt32(&w.master.stat_active, 1)
 		atomic.AddUint64(&w.master.stat_attempt, 1)

@@ -3,13 +3,14 @@ package workout
 import (
 	"errors"
 	"fmt"
-	"github.com/bububa/verboselogger"
+	log "github.com/bububa/factorlog"
 	"strconv"
 )
 
-var logger *log4go.VerboseLogger
+//var logger *log.FactorLog = log.New(os.Stdout, factorlog.NewStdFormatter(`%{Color "red:white" "CRITICAL"}%{Color "red" "ERROR"}%{Color "yellow" "WARN"}%{Color "green" "INFO"}%{Color "cyan" "DEBUG"}%{Color "blue" "TRACE"}[%{Date} %{Time}] [%{SEVERITY}:%{ShortFile}:%{Line}] %{Message}%{Color "reset"}`))
+var logger *log.FactorLog
 
-func SetLogger(alogger *log4go.VerboseLogger) {
+func SetLogger(alogger *log.FactorLog) {
 	logger = alogger
 }
 
