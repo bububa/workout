@@ -21,7 +21,6 @@ type Master struct {
 	concurrency    int
 	url            string
 	tubes          []string
-	client         *Client
 	workers        []*Worker
 	callbacks      map[string]JobCallback
 	handlers       map[string]JobHandler
@@ -46,15 +45,10 @@ func (m *Master) Stats() (s *Stats) {
 	return
 }
 
-func NewMaster(url string, tubes []string, concurrency int, max_retry uint64) *Master {
-	client, err := NewClient(url, tubes)
-	if err != nil {
-		logger.Error(err)
-	}
+func NewMaster(url string, concurrency int, max_retry uint64) *Master {
 	return &Master{
 		url:         url,
-		tubes:       tubes,
-		client:      client,
+		tubes:       make([]string, 0),
 		concurrency: concurrency,
 		callbacks:   make(map[string]JobCallback),
 		handlers:    make(map[string]JobHandler),
@@ -64,6 +58,7 @@ func NewMaster(url string, tubes []string, concurrency int, max_retry uint64) *M
 }
 
 func (m *Master) RegisterHandler(name string, hfn JobHandler, cfn JobCallback, to time.Duration) {
+	m.tubes = append(m.tubes, name)
 	m.handlers[name] = hfn
 	m.callbacks[name] = cfn
 	m.timeouts[name] = to
@@ -81,7 +76,11 @@ func (m *Master) Start() (err error) {
 	logger.Infof("master: starting %d workers...", m.concurrency)
 
 	for i := 0; i < m.concurrency; i++ {
-		m.workers[i] = NewWorker(m, i)
+		if m.workers[i], err = NewWorker(m, i); err != nil {
+			return Error("unable to start worker: %s", err)
+		}
+	}
+	for i := 0; i < m.concurrency; i++ {
 		go m.workers[i].run()
 	}
 

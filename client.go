@@ -178,3 +178,11 @@ func (c *Client) Stats() {
 		c.Exit()
 	}
 }
+
+func (c *Client) TubeStats(tube string) (map[string]string, error) {
+	t := &beanstalk.Tube{
+		Conn: c.conn,
+		Name: tube,
+	}
+	return t.Stats()
+}

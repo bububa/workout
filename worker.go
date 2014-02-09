@@ -16,13 +16,17 @@ var (
 	ErrJobTimeout = errors.New("job timed out")
 )
 
-func NewWorker(m *Master, wid int) (w *Worker) {
+func NewWorker(m *Master, wid int) (w *Worker, err error) {
 	//var err error
 
 	w = new(Worker)
 	w.master = m
 	w.id = wid
-	w.client = m.client
+	w.client, err = NewClient(m.url, m.tubes)
+
+	if err != nil {
+		return
+	}
 
 	if m.ReserveTimeout > time.Duration(0) {
 		w.client.ReserveTimeout = m.ReserveTimeout
