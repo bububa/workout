@@ -1,10 +1,13 @@
 package workout
 
 import (
+	"github.com/bububa/raven-go/raven"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+const SENTRY_DNS = "http://4b27200647234ab2a00c4452df8afe1c:a879047d88e1455dbf0ea055f3826c4b@sentry.xibao100.com/3"
 
 type JobHandler func(*Job) error
 type JobCallback func(*Job, error, time.Duration)
@@ -32,6 +35,7 @@ type Master struct {
 	stat_success   uint64
 	stat_failure   uint64
 	max_retry      uint64
+	sentry         *raven.Client
 	mg             sync.WaitGroup
 	wg             sync.WaitGroup
 }
@@ -46,6 +50,7 @@ func (m *Master) Stats() (s *Stats) {
 }
 
 func NewMaster(url string, concurrency int, max_retry uint64) *Master {
+	sentry, _ := raven.NewClient(SENTRY_DNS)
 	return &Master{
 		url:         url,
 		tubes:       make([]string, 0),
@@ -54,7 +59,12 @@ func NewMaster(url string, concurrency int, max_retry uint64) *Master {
 		handlers:    make(map[string]JobHandler),
 		timeouts:    make(map[string]time.Duration),
 		max_retry:   max_retry,
+		sentry:      sentry,
 	}
+}
+
+func (m *Master) SetSentry(sentry *raven.Client) {
+	m.sentry = sentry
 }
 
 func (m *Master) RegisterHandler(name string, hfn JobHandler, cfn JobCallback, to time.Duration) {

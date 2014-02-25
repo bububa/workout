@@ -159,6 +159,7 @@ func (c *Client) Drop() {
 		case <-ticker.C:
 			go c.Stats()
 		default:
+			time.Sleep(10 * time.Millisecond)
 		}
 		if job, ok, _ = c.Reserve(); !ok {
 			continue

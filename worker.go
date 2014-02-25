@@ -3,6 +3,7 @@ package workout
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 )
@@ -63,6 +64,7 @@ func (w *Worker) run() {
 			logger.Infof("worker %d: quitting...", w.id)
 			return
 		default:
+			time.Sleep(10 * time.Millisecond)
 		}
 
 		if job, ok, err = w.client.Reserve(); !ok {
@@ -91,6 +93,9 @@ func (w *Worker) process(job *Job) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			err = JobPanic{Value: recovered}
+			if w.master.sentry != nil {
+				w.master.sentry.CaptureMessage(string(debug.Stack()))
+			}
 		}
 	}()
 
