@@ -3,6 +3,7 @@ package workout
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
@@ -64,7 +65,8 @@ func (w *Worker) run() {
 			logger.Infof("worker %d: quitting...", w.id)
 			return
 		default:
-			time.Sleep(10 * time.Millisecond)
+			runtime.Gosched()
+			//	time.Sleep(10 * time.Millisecond)
 		}
 
 		if job, ok, err = w.client.Reserve(); !ok {
