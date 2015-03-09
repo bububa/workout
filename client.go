@@ -2,7 +2,7 @@ package workout
 
 import (
 	"fmt"
-	"github.com/bububa/beanstalk"
+	"github.com/kr/beanstalk"
 	"os"
 	"strings"
 	"sync"
