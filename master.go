@@ -1,13 +1,13 @@
 package workout
 
 import (
-	"github.com/bububa/raven-go/raven"
+	"github.com/kisielk/raven-go/raven"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const SENTRY_DNS = "http://4b27200647234ab2a00c4452df8afe1c:a879047d88e1455dbf0ea055f3826c4b@sentry.xibao100.com/3"
+const SENTRY_DNS = "https://40a8b3a4b5724b73a182a45dd888583e:082932b71c7a489cb32a9813acbb33b4@sentry.xibao100.com/3"
 
 type JobHandler func(*Job) error
 type JobCallback func(*Job, error, time.Duration)
