@@ -3,7 +3,7 @@ package workout
 import (
 	"errors"
 	"fmt"
-	log "github.com/bububa/factorlog"
+	log "github.com/kdar/factorlog"
 	"strconv"
 )
 
