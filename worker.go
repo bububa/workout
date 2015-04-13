@@ -3,8 +3,8 @@ package workout
 import (
 	"errors"
 	"fmt"
+	"github.com/getsentry/raven-go"
 	"runtime"
-	"runtime/debug"
 	"sync/atomic"
 	"time"
 )
@@ -93,11 +93,24 @@ func (w *Worker) run() {
 
 func (w *Worker) process(job *Job) (err error) {
 	defer func() {
-		if recovered := recover(); recovered != nil {
-			err = JobPanic{Value: recovered}
-			if w.master.sentry != nil {
-				w.master.sentry.CaptureMessage(string(debug.Stack()))
+		if w.master.sentry != nil {
+			var packet *raven.Packet
+			switch rval := recover().(type) {
+			case nil:
+				return
+			case error:
+				err = JobPanic{Value: rval}
+				packet = raven.NewPacket(rval.Error(), raven.NewException(rval, raven.NewStacktrace(2, 3, nil)))
+			default:
+				rvalStr := fmt.Sprint(rval)
+				rvalError := errors.New(rvalStr)
+				err = JobPanic{Value: rvalError}
+				packet = raven.NewPacket(rvalStr, raven.NewException(rvalError, raven.NewStacktrace(2, 3, nil)))
 			}
+
+			w.master.sentry.Capture(packet, nil)
+		} else if recovered := recover(); recovered != nil {
+			err = JobPanic{Value: recovered}
 		}
 	}()
 

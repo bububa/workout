@@ -1,13 +1,11 @@
 package workout
 
 import (
-	"github.com/kisielk/raven-go/raven"
+	"github.com/getsentry/raven-go"
 	"sync"
 	"sync/atomic"
 	"time"
 )
-
-const SENTRY_DNS = "https://40a8b3a4b5724b73a182a45dd888583e:082932b71c7a489cb32a9813acbb33b4@sentry.xibao100.com/3"
 
 type JobHandler func(*Job) error
 type JobCallback func(*Job, error, time.Duration)
@@ -50,7 +48,6 @@ func (m *Master) Stats() (s *Stats) {
 }
 
 func NewMaster(url string, concurrency int, max_retry uint64) *Master {
-	sentry, _ := raven.NewClient(SENTRY_DNS)
 	return &Master{
 		url:         url,
 		tubes:       make([]string, 0),
@@ -59,7 +56,6 @@ func NewMaster(url string, concurrency int, max_retry uint64) *Master {
 		handlers:    make(map[string]JobHandler),
 		timeouts:    make(map[string]time.Duration),
 		max_retry:   max_retry,
-		sentry:      sentry,
 	}
 }
 
