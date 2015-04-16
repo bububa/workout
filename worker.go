@@ -100,15 +100,18 @@ func (w *Worker) process(job *Job) (err error) {
 				return
 			case error:
 				err = JobPanic{Value: rval}
-				packet = raven.NewPacket(rval.Error(), raven.NewException(rval, raven.NewStacktrace(2, 3, nil)))
+				packet = raven.NewPacket(rval.Error(), raven.NewException(rval, raven.NewStacktrace(0, 3, nil)))
 			default:
 				rvalStr := fmt.Sprint(rval)
 				rvalError := errors.New(rvalStr)
 				err = JobPanic{Value: rvalError}
-				packet = raven.NewPacket(rvalStr, raven.NewException(rvalError, raven.NewStacktrace(2, 3, nil)))
+				packet = raven.NewPacket(rvalStr, raven.NewException(rvalError, raven.NewStacktrace(0, 3, nil)))
 			}
 
-			w.master.sentry.Capture(packet, nil)
+			_, ch := w.master.sentry.Capture(packet, nil)
+			if errSentry := <-ch; errSentry != nil {
+				logger.Error(errSentry)
+			}
 		} else if recovered := recover(); recovered != nil {
 			err = JobPanic{Value: recovered}
 		}
